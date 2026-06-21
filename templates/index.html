@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
     <link rel="icon" href="/static/cropped-ago-corallo-32x32.png" sizes="192x192" />
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <title>PerMeSeiAvventura Laboratori</title>
   </head>
   <body style="background-color: #d8f3ee;">
@@ -23,21 +24,63 @@
       ></div>
     </header>
     <main>
-      <div class="col">
+      <div class="col" x-data="verifica_iscrizione()">
         <div class="shadow-sm p-3 mx-5 mb-3 text-center rounded" style="background-color: #7fd6ca;">
-          <h3>Accedi ai laboratori</h3>
-          <form method="post" id="form_iscriviti">
+          <h3>Inserisci il tuo codice censimento</h3>
+          <form method="post" id="form_iscriviti" @submit.prevent="submitForm()">
             <div class="mb-3">
-              <label for="cod_censimento" class="form-label">Inserisci il tuo codice censimento</label>
-              <input type="text" class="form-control" id="cod_censimento" name="cod_censimento" placeholder="CODICE CENSIMENTO" required>
+              <input type="text" class="form-control" id="cod_censimento" name="cod_censimento" placeholder="CODICE CENSIMENTO" required x-model="formData.codice_socio">
             </div>
-            <button type="submit" class="btn btn-success" aria-describedby="send_descr" onclick="inviaForm()">Verifica iscrizione al convegno!</button>
+            <button type="submit" class="btn btn-success" aria-describedby="send_descr" x-show="!stato_verifica">Verifica!</button>
           </form>
+        </div>
+        <div class="shadow-sm p-3 mx-5 mb-3 text-center rounded" style="background-color: #7fd6ca;" x-show="stato_verifica">
+            Partecipante trovato:
+            <strong x-text="formData.nome"></strong>
+            <strong x-text="formData.cognome"></strong>
+            <br>
+            <a class="btn btn-success" href="">Iscriviti ai Laboratori!</a>
         </div>
       </div>
     </main>
     <footer></footer>
 
+  <script>
+  function verifica_iscrizione() {
+      return {
+          formData: {
+              codice_socio: "",
+              nome: "",
+              cognome: "",
+          },
+          stato_verifica: false,
+
+          async submitForm() {
+              try {
+                  const response = await fetch('/verifica_iscrizione', {
+                      method: 'POST',
+                      headers: {
+                          'Content-Type': 'application/json'
+                      },
+                      body: JSON.stringify(this.formData)
+                  })
+                  .then(response => response.json())
+                  .then(data => {
+                      this.stato_verifica = data.stato_verifica;
+                      this.formData.nome = data.nome;
+                      this.formData.cognome = data.cognome;
+                  });
+
+                  if (!response.ok) {
+                      throw new Error('Errore upload');
+                  }
+              } catch (err) {
+                  console.error(err);
+              }
+          }
+      }
+  }
+  </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
   </body>
 </html>

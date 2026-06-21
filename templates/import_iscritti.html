@@ -1,0 +1,116 @@
+{% extends "admin.html" %}
+
+{% block corpo %}
+
+<div class="mx-5">
+<ul class="nav nav-pills nav-fill">
+  <li class="nav-item">
+    <a class="nav-link active" aria-current="page" href="{{ url_for("import_iscritti") }}">Import Iscritti BC</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="{{ url_for("import_laboratori") }}">Import Laboratori</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="#">Gestione Iscrizioni</a>
+  </li>
+</ul>
+</div>
+
+<div class="m-5" x-data="excelUploader()">
+
+    <input
+        class="form-control"
+        type="file"
+        accept=".xlsx,.xls"
+        @change="loadFile($event)"
+    >
+
+    <div class="d-flex justify-content-center">
+        <button
+            class="btn my-2 btn-success"
+            @click="upload()"
+            :disabled="rows.length === 0"
+        >
+            Carica i dati
+        </button>
+    </div>
+
+    <table class="table" x-show="rows.length > 0">
+    <thead>
+        <tr>
+        <th scope="col">Codice Socio</th>
+        <th scope="col">Cognome</th>
+        <th scope="col">Nome</th>
+        </tr>
+    </thead>
+    <tbody>
+        <template x-for="row in rows" :key="row.id">
+            <tr>
+                <td x-text="row.id"></td>
+                <td x-text="row.cognome"></td>
+                <td x-text="row.nome"></td>
+            </tr>
+        </template>
+    </tbody>
+    </table>
+
+</div>
+
+<script>
+function excelUploader() {
+    return {
+        rows: [],
+
+        async loadFile(event) {
+            const file = event.target.files[0];
+
+            if (!file) {
+                return;
+            }
+
+            const data = await file.arrayBuffer();
+
+            const workbook = XLSX.read(data, {
+                type: 'array'
+            });
+
+            const firstSheet = workbook.Sheets["totali"];
+
+            const json = XLSX.utils.sheet_to_json(firstSheet);
+
+            this.rows = json
+                .filter(row => row.Codice && row.Cognome && row.Nome)
+                .map(row => ({
+                    id: row.Codice,
+                    cognome: row.Cognome,
+                    nome: row.Nome
+                }));
+
+            console.log(this.rows);
+        },
+
+        async upload() {
+            try {
+                const response = await fetch('/import_iscritti', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(this.rows)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Errore upload');
+                }
+
+                alert('Upload completato');
+            } catch (err) {
+                console.error(err);
+                alert('Errore durante l\'upload');
+            }
+        }
+    }
+}
+</script>
+
+{% endblock %}

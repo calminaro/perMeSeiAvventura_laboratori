@@ -21,7 +21,7 @@ def upgrade():
     op.create_table('laboratori',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('posti', sa.Integer(), nullable=False),
-    sa.Column('nome', sa.String(length=255), nullable=False),
+    sa.Column('titolo', sa.String(length=255), nullable=False),
     sa.Column('descrizione', sa.Text(), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )

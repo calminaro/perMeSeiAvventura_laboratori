@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, jsonify, request, url_for, flash, send_from_directory, send_file
+from flask import Flask, render_template, redirect, jsonify, request, url_for, flash, send_from_directory, send_file, session
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -70,9 +70,11 @@ class Partecipante(db.Model):
 class Laboratorio(db.Model):
     __tablename__ = "laboratori"
     id = db.Column(db.Integer, primary_key=True)
-    posti = db.Column(db.Integer, nullable=False)
-    nome = db.Column(db.String(255), nullable=False)
+    id_lab = db.Column(db.String(10), nullable=False)
+    titolo = db.Column(db.String(255), nullable=False)
     descrizione = db.Column(db.Text, nullable=False)
+    posti = db.Column(db.Integer, nullable=False)
+    tipologia = db.Column(db.String(10), nullable=False)
 
 class SysOption(db.Model):
     __tablename__ = "system_option"
@@ -80,6 +82,10 @@ class SysOption(db.Model):
     value = db.Column(db.String(128), nullable=False)
 
 migrate = Migrate(app, db)
+
+class TemporaryUser(UserMixin):
+    def __init__(self, id):
+        self.id = id
 
 @app.cli.command("init_db")
 def init_db():
@@ -98,11 +104,105 @@ def crea_regione():
 
 @login_manager.user_loader
 def load_user(user_id):
+
+    # Utente temporaneo
+    if user_id.startswith("temp:"):
+        temp_data = session.get("temp_user")
+
+        if temp_data and temp_data["id"] == user_id:
+            return TemporaryUser(
+                temp_data["id"]
+            )
+
+        return None
+
+    # Utente permanente
     return User.query.get(int(user_id))
 
 @app.route("/")
 def index():
     return render_template("index.html")
+
+@app.route("/verifica_iscrizione", methods=["POST"])
+def verifica_iscrizione():
+    dati = request.get_json()
+    output = {"stato_verifica": False, "nome": "", "cognome": ""}
+    partecipante = Partecipante.query.get(dati["codice_socio"])
+    if partecipante is None:
+        return output
+    output["stato_verifica"] = True
+    output["nome"] = partecipante.nome
+    output["cognome"] = partecipante.cognome
+
+    temp_id = f"temp:{dati["codice_socio"]}"
+
+    session["temp_user"] = {
+        "id": temp_id
+    }
+
+    login_user(
+        TemporaryUser(
+            temp_id
+        )
+    )
+
+    return output
+
+@app.route("/import_iscritti", methods=["GET", "POST"])
+@login_required
+def import_iscritti():
+    if request.method == "POST":
+        dati = request.get_json()
+
+        for riga in dati:
+            partecipante = Partecipante.query.get(riga["id"])
+            if partecipante is None:
+                tmp_partecipante = Partecipante(id=riga["id"], nome=riga["nome"], cognome=riga["cognome"])
+                db.session.add(tmp_partecipante)
+
+        db.session.commit()
+        return {"ok": True}
+    return render_template("import_iscritti.html")
+
+@app.route("/import_laboratori", methods=["GET", "POST"])
+@login_required
+def import_laboratori():
+    if request.method == "POST":
+        dati = request.get_json()
+
+        Laboratorio.query.delete()
+
+        for riga in dati["lab_mattino"]:
+            tmp_laboratorio = Laboratorio(id_lab=riga["id"], titolo=riga["titolo"], descrizione=riga["descrizione"], posti=riga["posti"], tipologia="mattino")
+            db.session.add(tmp_laboratorio)
+
+        for riga in dati["lab_pomeriggio"]:
+            tmp_laboratorio = Laboratorio(id_lab=riga["id"], titolo=riga["titolo"], descrizione=riga["descrizione"], posti=riga["posti"], tipologia="pomeriggio")
+            db.session.add(tmp_laboratorio)
+
+        db.session.commit()
+        return {"ok": True}
+    return render_template("import_lab.html")
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        utente = User.query.filter_by(username=request.form["username"]).first()
+        if utente:
+            if check_password_hash(utente.password, request.form["passwd"]):
+                login_user(utente)
+                return redirect(url_for("index"))
+            else:
+                flash("Username o Password errati!", "warning")
+        else:
+            flash("Utente inesistente!", "warning")
+    return render_template("login.html")
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for("index"))
 
 @app.errorhandler(404)
 def page_not_found(e):
