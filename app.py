@@ -99,21 +99,22 @@ def init_db():
         print(e)
 
 @app.cli.command("reset")
-def crea_regione():
+def reset_tool():
+    Iscrizione.query.delete()
+    Partecipante.query.delete()
+    Laboratorio.query.delete()
+    db.session.commit()
     print(f"Reset tool!")
 
 @login_manager.user_loader
 def load_user(user_id):
-
     # Utente temporaneo
     if user_id.startswith("temp:"):
         temp_data = session.get("temp_user")
-
         if temp_data and temp_data["id"] == user_id:
             return TemporaryUser(
                 temp_data["id"]
             )
-
         return None
 
     # Utente permanente
@@ -135,11 +136,9 @@ def verifica_iscrizione():
     output["cognome"] = partecipante.cognome
 
     temp_id = f"temp:{dati["codice_socio"]}"
-
     session["temp_user"] = {
         "id": temp_id
     }
-
     login_user(
         TemporaryUser(
             temp_id
