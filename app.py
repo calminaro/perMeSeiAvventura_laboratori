@@ -151,6 +151,8 @@ def verifica_iscrizione():
 @app.route("/import_iscritti", methods=["GET", "POST"])
 @login_required
 def import_iscritti():
+    if current_user.username != "admin":
+        return redirect("index")
     if request.method == "POST":
         dati = request.get_json()
 
@@ -167,6 +169,8 @@ def import_iscritti():
 @app.route("/import_laboratori", methods=["GET", "POST"])
 @login_required
 def import_laboratori():
+    if current_user.username != "admin":
+        return redirect("index")
     if request.method == "POST":
         dati = request.get_json()
 
