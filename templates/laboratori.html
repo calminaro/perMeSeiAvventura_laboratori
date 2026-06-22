@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Scelta Laboratori</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+
+<body style="background-color: #d8f3ee;">
+    <header>
+      <div
+        class="shadow-sm p-3 mb-3 text-white"
+        style="
+          background-image: url('/static/header-per-me-sei-avventura.jpg');
+          background-size: cover;
+          background-position: center;
+          min-height: 220px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        "
+      ></div>
+    </header>
+
+<div class="container py-4" x-data="laboratoriApp()">
+
+    <h2 class="mb-4">Scelta Laboratori</h2>
+
+    <ul class="nav nav-tabs">
+        <li class="nav-item">
+            <button
+                class="nav-link"
+                :class="{ 'active': tab === 'mattino' }"
+                @click="tab = 'mattino'">
+                Mattino
+            </button>
+        </li>
+        <li class="nav-item">
+            <button
+                class="nav-link"
+                :class="{ 'active': tab === 'pomeriggio' }"
+                @click="tab = 'pomeriggio'">
+                Pomeriggio
+            </button>
+        </li>
+    </ul>
+
+    <!-- MATTINO -->
+    <div x-show="tab === 'mattino'" class="mt-3">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Titolo</th>
+                    <th>Descrizione</th>
+                    <th>Posti</th>
+                    <th>Seleziona</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template x-for="lab in laboratoriMattino" :key="lab.id">
+                    <tr>
+                        <td x-text="lab.id_lab"></td>
+                        <td x-text="lab.titolo"></td>
+                        <td x-text="lab.descrizione"></td>
+                        <td x-text="lab.id !== 0 ? `${lab.posti_disponibili}/${lab.posti}` : ''"></td>
+                        <td>
+                            <input
+                                type="radio"
+                                class="btn-check"
+                                name="laboratorio_mattino"
+                                :id="'mattino-' + lab.id"
+                                :value="lab.id"
+                                x-model="sceltaMattino">
+
+                            <label
+                                class="btn"
+                                :class="sceltaMattino == lab.id ? 'btn-success' : 'btn-outline-success'"
+                                :for="'mattino-' + lab.id">
+
+                                <span x-text="sceltaMattino == lab.id ? 'Scelto' : 'Scegli'"></span>
+
+                            </label>
+                        </td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- POMERIGGIO -->
+    <div x-show="tab === 'pomeriggio'" class="mt-3">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Titolo</th>
+                    <th>Descrizione</th>
+                    <th>Posti</th>
+                    <th>Seleziona</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template x-for="lab in laboratoriPomeriggio" :key="lab.id">
+                    <tr>
+                        <td x-text="lab.id_lab"></td>
+                        <td x-text="lab.titolo"></td>
+                        <td x-text="lab.descrizione"></td>
+                        <td x-text="lab.id !== 0 ? `${lab.posti_disponibili}/${lab.posti}` : ''"></td>
+                        <td>
+                            <input
+                                type="radio"
+                                class="btn-check"
+                                name="laboratorio_pomeriggio"
+                                :id="'pomeriggio-' + lab.id"
+                                :value="lab.id"
+                                x-model="sceltaPomeriggio">
+
+                            <label
+                                class="btn"
+                                :class="sceltaPomeriggio == lab.id ? 'btn-success' : 'btn-outline-success'"
+                                :for="'pomeriggio-' + lab.id">
+
+                                <span x-text="sceltaPomeriggio == lab.id ? 'Scelto' : 'Scegli'"></span>
+
+                            </label>
+                        </td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mt-4">
+        <button
+            class="btn btn-primary"
+            @click="inviaScelta"
+            :disabled="!sceltaMattino || !sceltaPomeriggio">
+            Conferma
+        </button>
+    </div>
+
+    <div
+        class="alert alert-danger mt-3"
+        x-show="errore"
+        x-text="errore">
+    </div>
+
+    <div
+        class="alert alert-success mt-3"
+        x-show="successo"
+        x-text="successo">
+    </div>
+
+</div>
+
+<script>
+function laboratoriApp() {
+    return {
+        tab: 'mattino',
+
+        sceltaMattino: null,
+        sceltaPomeriggio: null,
+
+        errore: '',
+        successo: '',
+
+        laboratoriMattino: [],
+        laboratoriPomeriggio: [],
+
+        async init() {
+            await this.caricaLaboratori();
+
+            setInterval(() => {
+                this.caricaLaboratori();
+            }, 30000);
+        },
+
+        async caricaLaboratori() {
+            try {
+                const response = await fetch('/lista_laboratori');
+                const dati = await response.json();
+
+                this.laboratoriMattino = dati.mattino;
+                this.laboratoriPomeriggio = dati.pomeriggio;
+
+            } catch (err) {
+                console.error("Errore caricamento laboratori", err);
+            }
+        },
+
+        async inviaScelta() {
+
+            this.errore = '';
+            this.successo = '';
+
+            if (!this.sceltaMattino) {
+                this.errore = 'Seleziona un laboratorio per il mattino';
+                return;
+            }
+
+            if (!this.sceltaPomeriggio) {
+                this.errore = 'Seleziona un laboratorio per il pomeriggio';
+                return;
+            }
+
+            const payload = {
+                mattino: parseInt(this.sceltaMattino),
+                pomeriggio: parseInt(this.sceltaPomeriggio)
+            };
+
+            try {
+
+                const response = await fetch('/laboratori', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Errore durante il salvataggio');
+                }
+
+                this.successo = 'Scelta salvata correttamente';
+
+            } catch (err) {
+                this.errore = err.message;
+            }
+        }
+    };
+}
+</script>
+
+</body>
+</html>

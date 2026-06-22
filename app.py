@@ -144,7 +144,39 @@ def verifica_iscrizione():
             temp_id
         )
     )
+    return output
 
+@app.route("/laboratori", methods=["GET", "POST"])
+@login_required
+def laboratori():
+    if request.method == "POST":
+        dati = request.get_json()
+        tmp_id = int(current_user.id.removeprefix("temp:"))
+        if Partecipante.query.filter_by(id=tmp_id).count() == 0:
+            db.session.add(Iscrizione(data=datetime.now(), partecipante=tmp_id, scelta_mattino=dati["mattino"], scelta_pomeriggio=dati["pomeriggio"]))
+            db.session.commit()
+        return redirect(url_for("index"))
+    return render_template("laboratori.html")
+
+@app.route("/lista_laboratori")
+@login_required
+def lista_laboratori():
+    output = {"mattino": [{"id": 0, "titolo": "Nessuna scelta"}], "pomeriggio": [{"id": 0, "titolo": "Nessuna scelta"}]}
+    for i in Laboratorio.query.all():
+        tmp_posti = 0
+        if i.tipologia == "mattino":
+            tmp_posti = Iscrizione.query.filter_by(scelta_mattino=i.id).count()
+        if i.tipologia == "pomeriggio":
+            tmp_posti = Iscrizione.query.filter_by(scelta_pomeriggio=i.id).count()
+        output[i.tipologia].append(
+            {
+                "id": i.id,
+                "id_lab": i.id_lab,
+                "titolo": i.titolo,
+                "descrizione": i.descrizione,
+                "posti": i.posti,
+                "posti_disponibili": (i.posti - tmp_posti)
+            })
     return output
 
 @app.route("/import_iscritti", methods=["GET", "POST"])
