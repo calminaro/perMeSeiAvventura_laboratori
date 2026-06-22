@@ -104,7 +104,7 @@ def reset_tool():
     Partecipante.query.delete()
     Laboratorio.query.delete()
     db.session.commit()
-    print(f"Reset tool!")
+    print("Reset tool!")
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -135,7 +135,7 @@ def verifica_iscrizione():
     output["nome"] = partecipante.nome
     output["cognome"] = partecipante.cognome
 
-    temp_id = f"temp:{dati["codice_socio"]}"
+    temp_id = f"temp:{dati['codice_socio']}"
     session["temp_user"] = {
         "id": temp_id
     }
