@@ -86,6 +86,7 @@ migrate = Migrate(app, db)
 class TemporaryUser(UserMixin):
     def __init__(self, id):
         self.id = id
+        self.username = id
 
 @app.cli.command("init_db")
 def init_db():
