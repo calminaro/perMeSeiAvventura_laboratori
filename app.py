@@ -226,7 +226,7 @@ def login():
         if utente:
             if check_password_hash(utente.password, request.form["passwd"]):
                 login_user(utente)
-                return redirect(url_for("index"))
+                return redirect(url_for("import_iscritti"))
             else:
                 flash("Username o Password errati!", "warning")
         else:
