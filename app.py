@@ -43,7 +43,7 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 db = SQLAlchemy(app)
 
 login_manager = LoginManager(app)
-login_manager.login_view = "login"
+login_manager.login_view = "index"
 login_manager.login_message = u"Sessione scaduta!"
 
 # Classi Database
